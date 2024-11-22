@@ -1,4 +1,0 @@
-DOMAIN-SUFFIX,mesu.apple.com
-DOMAIN-SUFFIX,gdmf.apple.com
-DOMAIN-SUFFIX,updates-http.cdn-apple.com
-DOMAIN-SUFFIX,xp.apple.com
