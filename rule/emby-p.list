@@ -15,4 +15,4 @@ DOMAIN-SUFFIX,pub1.term.wtf
 DOMAIN,audio.poloemby.xyz
 DOMAIN,music.makifx.com
 DOMAIN,embyplus.org
-DOMAIN-SUFFIX,
+DOMAIN-SUFFIX,emby.wtf:443  //终点站
