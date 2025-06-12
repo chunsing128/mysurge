@@ -1,4 +1,4 @@
-IP-CIDR,18.141.159.176/32 // Added for: 18.141.159.176:9465 (Port Map)
+IP-CIDR,18.141.159.176/32
 IP-CIDR,35.78.213.150/32 // Added for: 35.78.213.150:9421 (Port Map)
 IP-CIDR,18.230.113.58/32 // Added for: 18.230.113.58:9434 (Port Map)
 IP-CIDR,3.67.12.34/32 // Added for: 3.67.12.34:9320 (Port Map)
