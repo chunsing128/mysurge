@@ -11,3 +11,5 @@ IP-CIDR,15.228.36.186/32,no-resolve
 IP-CIDR,3.122.237.212/32,no-resolve
 DOMAIN-SUFFIX,supercell.com
 DOMAIN-SUFFIX,squadbustersgame.com
+IP-ASN,9808,no-resolve
+DOMAIN-SUFFIX,mocogame.com
