@@ -5,3 +5,4 @@ IP-ASN, 62041, EU, no-resolve
 IP-ASN, 211157, EU, no-resolve
 IP-CIDR, 5.28.192.0/18, EU, no-resolve
 IP-CIDR, 109.239.140.0/24, EU, no-resolve
+IP-CIDR,95.161.76.100/31,REJECT,no-resolve,pre-matching
