@@ -39,15 +39,27 @@ function autoCaptureToken() {
 
     if (token && uid) {
       let existing = $persistentStore.read(KEY) || '';
-      let newEntry = `${token}#${uid}`;
+      let entries = existing ? existing.split(/[\n&]/) : [];
 
-      if (!existing.includes(newEntry)) {
-        const updated = existing ? `${existing}&${newEntry}` : newEntry;
-        $persistentStore.write(updated, KEY);
-        $notification.post("🎉 成功抓取摩托范Token", "", `UID: ${uid}`);
+      let index = entries.findIndex(e => e.split('#')[1] === uid);
+
+      if (index === -1) {
+        // 第一次新增
+        entries.push(`${token}#${uid}`);
+        $notification.post("🎉 第一次成功抓取 Token", "", `UID: ${uid}`);
       } else {
-        $notification.post("ℹ️ Token 已存在", "", `UID: ${uid}`);
+        let [oldToken] = entries[index].split('#');
+        if (oldToken !== token) {
+          // Token 有变，更新
+          entries[index] = `${token}#${uid}`;
+          $notification.post("🔄 已更新 Token", "", `UID: ${uid}`);
+        } else {
+          // Token 未变
+          $notification.post("ℹ️ 已存在相同 Token", "", `UID: ${uid} 的 Token 已记录`);
+        }
       }
+
+      $persistentStore.write(entries.join('&'), KEY);
     } else {
       $notification.post("⚠️ 抓取失败", "", "未获取到 token 或 uid");
     }
