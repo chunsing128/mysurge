@@ -1,104 +1,132 @@
-// surge-moto-signin-complete.js v3.0
-const BASE_URL = 'https://api.58moto.com'
+/**
+ * @fileoverview 摩托范一体化脚本（抓 token + 签到）
+ * @version 1.0.0
+ * @author sudojia
+ *
+ * [Script]
+ * http-request ^https:\/\/api\.58moto\.com\/user\/center\/info\/v2\/principal script-path=moto.js, requires-body=true, timeout=10, tag=摩托范Token抓取
+ * cron "33 3 * * *" script-path=moto.js, timeout=30, tag=摩托范自动签到
+ */
+
+const isRequest = typeof $request !== "undefined";
+const isCron = typeof $request === "undefined";
+
+// 公共配置
+const BASE_URL = 'https://api.58moto.com';
+const KEY = 'MOTO_TOKEN';
 const headers = {
-    'User-Agent': 'okhttp/4.11.0',
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'Accept-Encoding': 'gzip',
-    'os': 'OPPO:OPPO+R9s',
-    'osversion': '28',
-    'referer': BASE_URL,
-    'version': '3.57.63',
-    'timestamp': Date.now()
+  'User-Agent': 'okhttp/4.11.0',
+  'Content-Type': 'application/x-www-form-urlencoded',
+  'Accept-Encoding': 'gzip',
+  'os': 'OPPO:OPPO+R9s',
+  'osversion': '28',
+  'referer': 'api.58moto.com',
+  'version': '3.57.63'
+};
+
+// 自动抓 token（请求拦截执行）
+if (isRequest) {
+  autoCaptureToken();
+} else if (isCron) {
+  main();
 }
 
-// 环境变量验证函数
-const validateEnv = () => {
-    const requiredVars = ['MOTO_TOKENS']
-    for (const varName of requiredVars) {
-        if (!$env[varName]) {
-            $notify('致命错误', '', `缺少必要环境变量: ${varName}`)
-            $done()
-        }
+function autoCaptureToken() {
+  try {
+    const token = $request.headers.token;
+    const body = JSON.parse($response.body || '{}');
+    const uid = body?.data?.uid;
+
+    if (token && uid) {
+      let existing = $persistentStore.read(KEY) || '';
+      let newEntry = `${token}#${uid}`;
+
+      if (!existing.includes(newEntry)) {
+        const updated = existing ? `${existing}&${newEntry}` : newEntry;
+        $persistentStore.write(updated, KEY);
+        $notification.post("🎉 成功抓取摩托范Token", "", `UID: ${uid}`);
+      } else {
+        $notification.post("ℹ️ Token 已存在", "", `UID: ${uid}`);
+      }
+    } else {
+      $notification.post("⚠️ 抓取失败", "", "未获取到 token 或 uid");
     }
+  } catch (err) {
+    $notification.post("❌ 抓取异常", "", err.message);
+  }
+  $done();
 }
 
-// 多账号解析
-const parseAccounts = () => {
+// 主逻辑：签到
+async function main() {
+  const MOTOs = ($persistentStore.read(KEY) || '').split(/[\n&]/);
+  if (MOTOs.length === 0 || !MOTOs[0].includes('#')) {
+    $notification.post("⚠️ 摩托范", "", "未配置任何账号，请先使用 App 抓取 token");
+    return $done();
+  }
+
+  let results = [];
+
+  for (let [index, item] of MOTOs.entries()) {
+    const [token, uid] = item.split('#');
+    if (!token || !uid) continue;
+
+    headers.token = token;
+
     try {
-        return $env.MOTO_TOKENS.split('\n').map(item => {
-            const [token, uid] = item.split('#')
-            if (!token || !uid) throw new Error('账号格式错误')
-            return { token, uid }
-        })
+      const userRes = await send('POST', '/user/center/info/v2/principal', `uid=${uid}`);
+      const name = userRes.data?.nickname || `账号${index + 1}`;
+      results.push(`🧍‍♂️ ${name}`);
+
+      const isSign = await send('GET', `/coins/task/v2/isSign?uid=${uid}`);
+      if (isSign?.data?.isSign) {
+        results.push('✅ 已签到');
+      } else {
+        const signRes = await send('POST', '/coins/task/dailyCheckIn', `uid=${uid}&weekDate=${formatDate()}`);
+        results.push(signRes.code === 0 ? '🎉 签到成功' : `❌ 签到失败：${signRes.msg}`);
+      }
+
+      const energy = await send('GET', `/coins/account/energy?uid=${uid}`);
+      results.push(`🔋 当前能量：${energy.data?.available ?? '获取失败'}`);
     } catch (err) {
-        $notify('配置错误', '', err.message)
-        $done()
+      results.push(`❌ 执行异常：${err.message}`);
     }
+
+    results.push(''); // 分隔
+  }
+
+  $notification.post("摩托范签到结果", "", results.join('\n'));
+  $done();
 }
 
-// 主执行流程
-!(async () => {
-    try {
-        validateEnv()
-        const accounts = parseAccounts()
-        let results = []
-        
-        for (const account of accounts) {
-            try {
-                headers.token = account.token
-                const userInfo = await getUserInfo(account.uid)
-                const signInRes = await checkAndSign(account.uid)
-                const points = await getEnergyPoints(account.uid)
-                results.push(`【${account.uid}】\n${userInfo}\n签到结果：${signInRes}\n能量值：${points}\n`);
-            } catch (err) {
-                results.push(`【${account.uid}】异常: ${err.message}`);
-                await $task.delay(sudojia.getRandomDelay(3000, 5000));
-                continue;
-            }
-            await $task.delay(sudojia.getRandomDelay(2000, 2500));
+// 通用请求
+function send(method, path, body = '') {
+  return new Promise((resolve) => {
+    const opts = {
+      url: BASE_URL + path,
+      headers: headers,
+      method,
+    };
+    if (method === 'POST') opts.body = body;
+
+    $httpClient[method.toLowerCase()](opts, (err, resp, data) => {
+      if (err) {
+        resolve({ code: -1, msg: err.message });
+      } else {
+        try {
+          resolve(JSON.parse(data));
+        } catch {
+          resolve({ code: -2, msg: 'JSON解析失败' });
         }
-        
-        // 生成报告
-        const report = results.join('\n\n') + `\n\n执行时间：${new Date().toLocaleString()}`;
-        await $file.write('/sdcard/signin.log', report);
-        await notify.sendNotify('摩托范签到报告', report);
-    } catch (err) {
-        $notify('严重错误', '', err.stack);
-    } finally {
-        $done();
-    }
-})()
-
-// 核心功能函数
-async function getUserInfo(uid) {
-    const response = await $task.fetch(`${BASE_URL}/user/center/info/v2/principal`, {
-        method: 'POST',
-        headers,
-        body: `uid=${uid}`
+      }
     });
-    
-    if (response.body.code !== 0) throw new Error(response.body.msg);
-    const data = response.body.data;
-    headers.token = data.token;
-    return `${maskPhone(data.mobile)} (${data.nickname})`;
+  });
 }
 
-async function checkAndSign(uid) {
-    const isSigned = await checkSignInStatus(uid);
-    if (isSigned) return '今日已签到';
-    
-    const response = await performSignIn(uid);
-    return response.data.contentDesc || '签到成功';
+function formatDate() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
 }
-
-async function performSignIn(uid) {
-    return $task.fetch(`${BASE_URL}/coins/task/dailyCheckIn`, {
-        method: 'POST',
-        headers,
-        body: `uid=${uid}&weekDate=${moment().format('YYYYMMDD')}`
-    });
-}
-
-// 辅助函数
-const maskPhone = (num) => num.replace(/(\d{3})\d{4}(\d{3})/, '$1***$2');
-const log = (msg) => $file.append('/sdcard/signin.log', `[${new Date().toISOString()}] ${msg}\n`);
