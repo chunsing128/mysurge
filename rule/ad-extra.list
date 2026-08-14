@@ -1,0 +1,10 @@
+
+URL-REGEX,^https?:\/\/api\.(pinduoduo|yangkeduo)\.com\/api\/cappuccino\/splash
+DOMAIN-SUFFIX,wxs.qq.com,extended-matching
+DOMAIN-SUFFIX,juicyads.com
+DOMAIN-SUFFIX,jads.co
+PROTOCOL,STUN
+DOMAIN-SUFFIX,applovin.com
+DOMAIN-SUFFIX,applvn.com
+DOMAIN-SUFFIX,doubleclick.net
+IP-CIDR,0.0.0.0/32,no-resolve
