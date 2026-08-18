@@ -22,3 +22,4 @@ IP-ASN,132203,no-resolve
 AND,((PROTOCOL,(RULE-SET,https://raw.githubusercontent.com/NobyDa/Script/master/Surge/WeChat.list)),🌐 DIRECT
 DOMAIN,sdkapp.uve.weibo.com
 DOMAIN-KEYWORD,huacloud.dev
+DOMAIN-KEYWORD,tabitoken.com
