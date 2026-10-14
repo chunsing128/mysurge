@@ -23,4 +23,3 @@ AND,((PROTOCOL,(RULE-SET,https://raw.githubusercontent.com/NobyDa/Script/master/
 DOMAIN,sdkapp.uve.weibo.com
 DOMAIN-KEYWORD,huacloud.dev
 DOMAIN-KEYWORD,carpetpacific.com  # 国际机场
-DOMAIN-SUFFIX,wzyp.cn  # 贾维斯
